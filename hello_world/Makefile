@@ -3,7 +3,10 @@
 # project subdirectory.
 #
 
+
 PROJECT_NAME := hello-world
 
+include ../common.mk
+IDF_PATH := $(SDK_ROOT)
 include $(IDF_PATH)/make/project.mk
 
