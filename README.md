@@ -1,5 +1,6 @@
 # esp8266-sensor-publisher
 
+
 ## Prerequisites
 
 `esp8266` is a legacy machine which uses an exotic ISA, `xtensa`.
@@ -13,4 +14,13 @@ The `esptool` is available as official Arch package.
  * `xtensa-lx106-elf-gcc-bin`
  * `esp8266-rtos-sdk`
  * `esptool`
+
+
+## SDK libraries
+
+The only purpose of the [`hello_world`](hello_world) directory is to
+build the static libraries of the `esp8266` sdk. When building the
+application, one can then link against these libraries. It contains
+the [`cmake_build`](hello_world/cmake_build) script in order to
+initiate the `cmake` build procedure.
 
