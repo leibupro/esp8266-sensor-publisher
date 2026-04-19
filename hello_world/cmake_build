@@ -1,0 +1,21 @@
+#! /usr/bin/env bash
+
+
+# Set your environment variables
+export IDF_PATH=/opt/esp8266-rtos-sdk
+export PATH="$PATH:/opt/xtensa-lx106-elf-gcc/bin"
+
+
+function main()
+{
+    mkdir build && cd build
+    cmake .. -G "Unix Makefiles" \
+          -DIDF_TARGET=esp8266 \
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+    make -j$(nproc)
+}
+
+
+main
+
