@@ -1,0 +1,122 @@
+#! /usr/bin/env bash
+
+sdk_root="/opt/esp8266-rtos-sdk"
+example_proj="../wifi_station"
+libdir="./lib"
+lddir="./ld"
+sdkhdrdir="./sdk_headers"
+
+function grab_example_project_libraries()
+{
+    #
+    # We do not want the specific bootloader libraries
+    # to be present in the application build environment.
+    #
+    # Breakdown of readarray / find combination:
+    #
+    # * -print0: Tells find to separate results with
+    #   a null character (\0) instead of a newline.
+    #
+    # * < <(...): This is "Process Substitution". It feeds
+    #   the output of the find command into readarray
+    #   as if it were a file.
+    #
+    # * -d '': Tells readarray that the items are separated
+    #   by that same null character.
+    #
+    # Notes on find:
+    #
+    # 1. -path "./exclude_dir" -prune: Finds the directory
+    #    and stops it from being searched.
+    #
+    # 2. -o (or operator of find): If the first part didn't
+    #    match (i.e., everything except that directory) ...
+    #
+    # 3. -type f -name "*.a" -print: Check if it's a file ending
+    #    in .a. If it is, print it.
+    #
+    # Without that final -print, find uses its "default"
+    # print action on the result of the entire expression,
+    # which includes the pruned directory itself.
+    #
+    # For multiple directories to exclude:
+    # ... \( -path "./dir1" -o -path "./dir2" -o -path "./dir3" \) \
+    # -prune -o ...
+    #
+    readarray -d '' proj_libs < \
+        <(find ${example_proj} -path "*/bootloader" -prune \
+          -o -type f -name "*.a" -print0)
+    for i in ${proj_libs[@]}; do
+        if [[ ! -f ${libdir}/$(basename ${i}) ]]; then
+            cp ${i} ${libdir}
+        else
+            printf "$(basename ${i}) already exists in ${libdir}.\n"
+        fi
+    done
+}
+
+function grab_ld_scripts()
+{
+    if [[ ! -d ${lddir} ]]; then
+        mkdir ${lddir}
+    fi
+    ld_scripts=( \
+        ${sdk_root}/components/esp8266/ld/esp8266.rom.ld \
+        ${sdk_root}/components/esp8266/ld/esp8266.peripherals.ld \
+        ${example_proj}/build/esp8266/esp8266_out.ld \
+        ${example_proj}/build/esp8266/esp8266.project.ld \
+    )
+    for i in ${ld_scripts[@]}; do
+        cp ${i} ${lddir}
+    done
+}
+
+function grab_sdk_headers()
+{
+    if [[ ! -d ${sdkhdrdir} ]]; then
+        mkdir ${sdkhdrdir}
+    fi
+    search_root="${sdk_root}/components"
+    readarray -d '' header_dirs < \
+        <(find ${search_root} -type d -name "include" -print0)
+    for i in ${header_dirs[@]}; do
+        # printf "${#i}\n"
+        # printf "${i:${#search_root}}\n"
+        target_dir="${sdkhdrdir}${i:${#search_root}}"
+        mkdir -p ${target_dir}
+        cp -r ${i}/. ${target_dir}
+    done
+}
+
+function grab_sdkconfig_header()
+{
+    cp ${example_proj}/build/include/sdkconfig.h ./include
+}
+
+function grab_sdk_blobs()
+{
+    readarray -d '' sdk_libs < \
+        <(find ${sdk_root}/components -type f -name "*.a" -print0)
+    for i in ${sdk_libs[@]}; do
+        if [[ ! -f ${libdir}/$(basename ${i}) ]]; then
+            cp ${i} ${libdir}
+        else
+            printf "$(basename ${i}) already exists in ${libdir}.\n"
+        fi
+    done
+}
+
+function main()
+{
+    if [[ ! -d ${libdir} ]]; then
+        mkdir ${libdir}
+    fi
+    grab_sdk_headers
+    gre
+    grab_ld_scripts
+    grab_sdk_blobs
+    grab_example_project_libraries
+}
+
+main
+
