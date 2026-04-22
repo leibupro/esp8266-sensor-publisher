@@ -112,7 +112,7 @@ function main()
         mkdir ${libdir}
     fi
     grab_sdk_headers
-    gre
+    grab_sdkconfig_header
     grab_ld_scripts
     grab_sdk_blobs
     grab_example_project_libraries
