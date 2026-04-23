@@ -41,7 +41,6 @@
 #include "dht.h"
 
 #include <freertos/FreeRTOS.h>
-#include <string.h>
 #include <esp_log.h>
 #include <ets_sys.h>
 
@@ -204,7 +203,7 @@ static inline int16_t dht_convert_data(
         data = ( int16_t )( data | lsb );
         if (msb & BIT(7))
         {
-            data = ( int16_t )( -data ) ;  // convert it to negative
+            data = ( int16_t )( -data );  // convert it to negative
         }
     }
 

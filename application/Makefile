@@ -41,6 +41,7 @@ INCDIRS := freertos/include \
            heap/port/esp8266/include \
            heap/include \
            esp8266/include \
+           esp8266/include/rom \
            log/include \
            tcpip_adapter/include \
            esp_event/include \
@@ -161,7 +162,8 @@ BINDIR := ./bin
 
 INCLUDES := $(addprefix -I, $(INCDIRS))
 
-SRC := main.c
+SRC := dht.c \
+       main.c
 
 OBJ := $(addprefix $(OBJDIR)/, $(SRC:.c=.o))
 
