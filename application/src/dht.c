@@ -165,13 +165,18 @@ static inline esp_err_t dht_fetch_data(
                    "LOW bit timeout");
         CHECK_LOGE(dht_await_pin_state(pin, 75, 0, &high_duration),
                    "HIGH bit timeout");
-
-        uint8_t b = i / 8;
-        uint8_t m = i % 8;
+        /*
+         * Casts safe as long as DHT_DATA_BITS are <= 0xFF.
+         * */
+        uint8_t b = ( ( uint8_t )i / 8U );
+        uint8_t m = ( ( uint8_t )i % 8U );
         if (!m)
             data[b] = 0;
-
-        data[b] |= (high_duration > low_duration) << (7 - m);
+        /*
+         * Cast is safe because the expression is 1 << 7 at max.
+         * */
+        data[b] |= ( uint8_t )
+            ( (high_duration > low_duration) << (7 - m) );
     }
 
     return ESP_OK;
@@ -190,22 +195,28 @@ static inline int16_t dht_convert_data(
 
     if (sensor_type == DHT_TYPE_DHT11)
     {
-        data = msb * 10;
+        data = ( int16_t )( msb * 10 );
     }
     else
     {
         data = msb & 0x7F;
-        data <<= 8;
-        data |= lsb;
+        data = ( int16_t )( data << 8 );
+        data = ( int16_t )( data | lsb );
         if (msb & BIT(7))
-            data = -data;       // convert it to negative
+        {
+            data = ( int16_t )( -data ) ;  // convert it to negative
+        }
     }
 
     return data;
 }
 
-esp_err_t dht_read_data(dht_sensor_type_t sensor_type, gpio_num_t pin,
-                        int16_t *humidity, int16_t *temperature)
+esp_err_t dht_read_data(
+    dht_sensor_type_t sensor_type,
+    gpio_num_t pin,
+    int16_t* humidity,
+    int16_t* temperature
+)
 {
     CHECK_ARG(humidity || temperature);
 
@@ -243,8 +254,12 @@ esp_err_t dht_read_data(dht_sensor_type_t sensor_type, gpio_num_t pin,
     return ESP_OK;
 }
 
-esp_err_t dht_read_float_data(dht_sensor_type_t sensor_type, gpio_num_t pin,
-                              float *humidity, float *temperature)
+esp_err_t dht_read_float_data(
+    dht_sensor_type_t sensor_type,
+    gpio_num_t pin,
+    float* humidity,
+    float* temperature
+)
 {
     CHECK_ARG(humidity || temperature);
 
@@ -255,9 +270,9 @@ esp_err_t dht_read_float_data(dht_sensor_type_t sensor_type, gpio_num_t pin,
         return res;
 
     if (humidity)
-        *humidity = i_humidity / 10.0;
+        *humidity = i_humidity / 10.0f;
     if (temperature)
-        *temperature = i_temp / 10.0;
+        *temperature = i_temp / 10.0f;
 
     return ESP_OK;
 }
