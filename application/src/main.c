@@ -1,18 +1,17 @@
-/* Hello World Example
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_log.h"
 #include "esp_spi_flash.h"
 #include "driver/gpio.h"
 #include "dht.h"
+
+
+static const char* const tag_main = "app_main";
+//static const char* const tag_senrd = "dht11_reader";
+//static const char* const tag_mqtt_pub = "mqtt_publisher";
 
 
 void app_main( void )
@@ -21,17 +20,20 @@ void app_main( void )
     int16_t humidity = 0;
     int16_t temperature = 0;
 
-    ( void )printf( "\n\nHello world!\n" );
+    ESP_LOGI( tag_main, " " );
+    ESP_LOGI( tag_main, " " );
+    ESP_LOGI( tag_main, "Hello world!" );
 
     /* Print chip information */
     esp_chip_info_t chip_info;
     esp_chip_info( &chip_info );
-    ( void )printf( "This is ESP8266 chip with %d CPU cores, WiFi, ",
-                    chip_info.cores );
-
-    ( void )printf( "silicon revision %d, ", chip_info.revision );
-
-    ( void )printf( "%dMB %s flash\n",
+    ESP_LOGI(
+        tag_main,
+        "This is ESP8266 chip with %d CPU cores, WiFi, "
+        "silicon revision %d, "
+        "%dMB %s flash.",
+        chip_info.cores,
+        chip_info.revision,
         spi_flash_get_chip_size() / ( 1024 * 1024 ),
         ( chip_info.features & CHIP_FEATURE_EMB_FLASH ) ?
         "embedded" : "external"
@@ -73,8 +75,10 @@ void app_main( void )
         temperature /= 10;
         if( sen_read_result == ESP_OK )
         {
-            ( void )printf(
-                "Humidity: %hd %%, Temp: %hd Deg C\n",
+            ESP_LOGD(
+                tag_main,
+                "Humidity: %hd %%, "
+                "Temperature: %hd Degree Celsius.",
                 humidity,
                 temperature
             );
@@ -84,17 +88,12 @@ void app_main( void )
         }
         else
         {
-            ( void )printf( "Sensor Error\n" );
+            ESP_LOGE(
+                tag_main,
+                "Sensor read error ..."
+            );
         }
         ( void )fflush( stdout );
         vTaskDelay( 2500 / portTICK_PERIOD_MS );
     }
-
-    //for (int i = 20; i >= 0; i--) {
-    //    printf("Restarting in %d seconds...\n", i);
-    //    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    //}
-    //printf("Restarting now.\n");
-    //fflush(stdout);
-    //esp_restart();
 }

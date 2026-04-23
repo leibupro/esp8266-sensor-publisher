@@ -247,9 +247,14 @@ esp_err_t dht_read_data(
         *humidity = dht_convert_data(sensor_type, data[0], data[1]);
     if (temperature)
         *temperature = dht_convert_data(sensor_type, data[2], data[3]);
-
-    ESP_LOGD(TAG, "Sensor data: humidity=%d, temp=%d", *humidity, *temperature);
-
+    /*
+     * ESP_LOGD(
+     *     TAG,
+     *     "Sensor data: humidity=%d, temp=%d",
+     *     *humidity,
+     *     *temperature
+     * );
+     * */
     return ESP_OK;
 }
 
