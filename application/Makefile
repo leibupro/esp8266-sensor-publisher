@@ -163,6 +163,7 @@ BINDIR := ./bin
 INCLUDES := $(addprefix -I, $(INCDIRS))
 
 SRC := dht.c \
+       wifi.c \
        main.c
 
 OBJ := $(addprefix $(OBJDIR)/, $(SRC:.c=.o))

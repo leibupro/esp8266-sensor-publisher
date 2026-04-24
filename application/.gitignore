@@ -1,3 +1,4 @@
+include/passwd.h
 obj/
 bin/
 
