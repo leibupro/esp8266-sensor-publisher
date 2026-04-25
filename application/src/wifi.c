@@ -183,11 +183,26 @@ static void event_handler(
     else if( ( event_base == WIFI_EVENT ) &&
              ( event_id == WIFI_EVENT_STA_DISCONNECTED ) )
     {
-        xEventGroupSetBits(
-            s_wifi_event_group,
-            WIFI_FAIL_BIT
-        );
+        wifi_event_sta_disconnected_t* event =
+            ( wifi_event_sta_disconnected_t* )event_data;
         ESP_LOGI( tag_wifi, "connect to the AP fail" );
+        ESP_LOGW( tag_wifi, "Disconnect reason: %u", event->reason );
+        if( ( event->reason == WIFI_REASON_AUTH_FAIL ) ||
+            ( event->reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ) )
+        {
+            ESP_LOGE(
+                tag_wifi,
+                "Critical: Wrong wifi password. "
+                "Reconnect aborted."
+            );
+        }
+        else
+        {
+            xEventGroupSetBits(
+                s_wifi_event_group,
+                WIFI_FAIL_BIT
+            );
+        }
     }
     else if( ( event_base == IP_EVENT ) &&
              ( event_id == IP_EVENT_STA_GOT_IP ) )
