@@ -29,7 +29,7 @@ dht11_record_t;
 
 static const char* const tag_main = "app_main";
 static const char* const tag_senrd = "dht11_reader";
-static const char* const tag_pub = "mqtt_publisher";
+static const char* const tag_pub = "data_publisher";
 
 static QueueHandle_t dht_rec_que = NULL;
 
