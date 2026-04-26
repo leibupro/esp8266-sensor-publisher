@@ -8,24 +8,26 @@
 #include "driver/gpio.h"
 #include "dht.h"
 #include "wifi.h"
+#include "mqtt.h"
+#include "data.h"
+
 
 /*
  * Caution: D4 label on the board means GPIO_NUM_2 !!!
  * */
 #define DHT_GPIO GPIO_NUM_2
 #define SENSOR_TYPE DHT_TYPE_DHT11
+#define MAX_QUE_ITEMS 16
 /*
  * Unit is milliseconds ...
+ * Data publish interval [ms] is approximately:
+ * ( NUM_SAMPLES_PER_PUB * SEN_RD_INTERVAL )
  * */
-#define SEN_RD_INTERVAL 2500
-#define MAX_QUE_ITEMS 16
+#define SEN_RD_INTERVAL 5000
+#define NUM_SAMPLES_PER_PUB ( 5 * 12 )
 
-typedef struct
-{
-    int16_t humidity;
-    int16_t temperature;
-}
-dht11_record_t;
+#define ENABLE_MQTT_PUB 1
+
 
 static const char* const tag_main = "app_main";
 static const char* const tag_senrd = "dht11_reader";
@@ -68,7 +70,7 @@ void app_main( void )
     );
     dht_rec_que = xQueueCreate(
         MAX_QUE_ITEMS,
-        sizeof( dht11_record_t )
+        sizeof( data_record_t )
     );
     if( dht_rec_que == NULL )
     {
@@ -80,6 +82,9 @@ void app_main( void )
         return;
     }
     wifi_init_sta();
+    #if ENABLE_MQTT_PUB
+    mqtt_publisher_init();
+    #endif
     err_chk = xTaskCreate(
         dht_task,    // Entry
         "DHT_task",  // Name
@@ -120,7 +125,7 @@ static void dht_task( void* params )
 {
     esp_err_t sen_read_result = ESP_FAIL;
     BaseType_t err_chk = -1;
-    dht11_record_t record = { 0 };
+    data_record_t record = { 0 };
     ( void )params;
     /*
      * Wait for the sensor because the DH11 is
@@ -193,7 +198,7 @@ static void dht_task( void* params )
 static void data_pub_task( void* params )
 {
     BaseType_t err_chk = -1;
-    dht11_record_t record = { 0 };
+    data_record_t record = { 0 };
     ( void )params;
     ESP_LOGI(
         tag_pub,
@@ -221,6 +226,9 @@ static void data_pub_task( void* params )
                 record.humidity,
                 record.temperature
             );
+            #if ENABLE_MQTT_PUB
+            mqtt_publish_record( &record );
+            #endif
             record.humidity = 0;
             record.temperature = 0;
             err_chk = -1;

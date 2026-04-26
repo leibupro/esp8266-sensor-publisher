@@ -47,7 +47,8 @@ INCDIRS := freertos/include \
            esp_event/include \
            nvs_flash/include \
            spi_flash/include \
-           lwip/lwip/src/include
+           lwip/lwip/src/include \
+           mqtt/esp-mqtt/include 
 INCDIRS := $(addprefix ./sdk_headers/, $(INCDIRS))
 INCDIRS += include
 
@@ -164,6 +165,7 @@ INCLUDES := $(addprefix -I, $(INCDIRS))
 
 SRC := dht.c \
        wifi.c \
+       mqtt.c \
        main.c
 
 OBJ := $(addprefix $(OBJDIR)/, $(SRC:.c=.o))

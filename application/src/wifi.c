@@ -14,6 +14,9 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "wifi.h"
+
+
 /*
  * Max 1 minute between attempts
  * */
@@ -22,15 +25,6 @@
  * Start with 2 seconds
  * */
 #define MIN_RETRY_DELAY_MS 2000U
-
-/*
- * The event group allows multiple bits for each event,
- * but we only care about two events:
- * - we are connected to the AP with an IP
- * - we failed to connect after the maximum amount of retries
- * */
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
 
 
 static const char* const tag_wifi = "wifi_station";
@@ -54,6 +48,12 @@ static void event_handler(
     void* event_data
 );
 static void wifi_reconnect_task( void* params );
+
+
+EventGroupHandle_t wifi_get_event_group( void )
+{
+    return s_wifi_event_group;
+}
 
 
 void wifi_init_sta( void )
