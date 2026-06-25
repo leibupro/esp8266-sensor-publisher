@@ -7,6 +7,7 @@
 
 typedef struct
 {
+    uint32_t ts;
     int16_t humidity;
     int16_t temperature;
 }

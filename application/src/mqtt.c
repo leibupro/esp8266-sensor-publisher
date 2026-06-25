@@ -24,10 +24,11 @@
 #define TOPIC_SPACE 64U
 #define PUB_QOS 1
 #define PUB_DATA_BASE ( \
+    "ms since OS start: %10u, " \
     "Humidity: %2hd %%, " \
     "Temperature: %3hd degree Celsius." \
 )
-#define DATA_SPACE 64U
+#define DATA_SPACE 128U
 
 
 static esp_mqtt_client_handle_t client = NULL;
@@ -140,6 +141,7 @@ static void publish(
             &pub_data[ 0U ],
             DATA_SPACE,
             PUB_DATA_BASE,
+            record->ts,
             record->humidity,
             record->temperature
         );

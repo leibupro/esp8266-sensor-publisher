@@ -1,4 +1,6 @@
 
+#include <stdint.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -28,12 +30,31 @@
 
 #define ENABLE_MQTT_PUB 1
 
+/*
+ * The underlying problem is that the ESP8266 RTOS SDK relies
+ * on a minimal C standard library (newlib nano). To save RAM
+ * and ROM on the 32-bit ESP8266 processor, 64-bit integer
+ * (%llu / %lld) formatting support is explicitly stripped out
+ * or unhandled by default.
+ *
+ * raw_count is a uint64_t. So we split it here and display the
+ * value in hex ...
+ * */
+#define RAW_LOG_FMT \
+    "Raw count: 0x%08x%08x, " \
+    "hum: %2hd %%, " \
+    "temp: %3hd dec C."
+
 
 static const char* const tag_main = "app_main";
 static const char* const tag_senrd = "dht11_reader";
 static const char* const tag_pub = "data_publisher";
 
 static QueueHandle_t dht_rec_que = NULL;
+
+static data_record_t record_bucket[ NUM_SAMPLES_PER_PUB ] = { 0 };
+static size_t bucket_ptr = 0U;
+
 
 /*
  * Public function prototypes ...
@@ -44,6 +65,7 @@ void app_main( void );
  * */
 static void dht_task( void* params );
 static void data_pub_task( void* params );
+static uint32_t get_ms_since_os_start( void );
 
 
 void app_main( void )
@@ -125,7 +147,12 @@ static void dht_task( void* params )
 {
     esp_err_t sen_read_result = ESP_FAIL;
     BaseType_t err_chk = -1;
-    data_record_t record = { 0 };
+    data_record_t* record = ( data_record_t* )0U;
+    data_record_t* tx_record = ( data_record_t* )0U;
+    int hum_accu = 0;
+    int temp_accu = 0;
+    data_record_t mean_rec = { 0 };
+    uint64_t raw_count = 0ULL;
     ( void )params;
     /*
      * Wait for the sensor because the DH11 is
@@ -159,28 +186,68 @@ static void dht_task( void* params )
 
     for( ;; )
     {
+        record = &( record_bucket[ bucket_ptr ] );
+        bucket_ptr++;
         sen_read_result = dht_read_data(
             SENSOR_TYPE,
             DHT_GPIO,
-            &( record.humidity ),
-            &( record.temperature )
+            &( record->humidity ),
+            &( record->temperature )
         );
         if( sen_read_result == ESP_OK )
         {
-            record.humidity /= 10;
-            record.temperature /= 10;
-            err_chk = xQueueSend( dht_rec_que, &record, 0 );
-            if( err_chk != pdPASS )
+            record->ts = get_ms_since_os_start();
+            record->humidity /= 10;
+            record->temperature /= 10;
+            hum_accu += record->humidity;
+            temp_accu += record->temperature;
+            ESP_LOGI(
+                tag_senrd,
+                RAW_LOG_FMT,
+                ( uint32_t )( raw_count >> 32U ),
+                ( uint32_t )raw_count,
+                record->humidity,
+                record->temperature
+            );
+            /*
+             * Always publish the very first unflattened
+             * sensor read via MQTT ...
+             * */
+            if( raw_count == 0ULL )
             {
-                ESP_LOGW(
-                    tag_senrd,
-                    "Queue full. Skipping this sensor reading."
-                );
+                tx_record = record;
             }
-            record.humidity = 0;
-            record.temperature = 0;
-            sen_read_result = ESP_FAIL;
-            err_chk = -1;
+            /*
+             * Bucket full. Flatten records and
+             * publish mean value via MQTT ...
+             * */
+            if( bucket_ptr == NUM_SAMPLES_PER_PUB )
+            {
+                mean_rec.humidity =
+                    ( int16_t )( hum_accu / NUM_SAMPLES_PER_PUB );
+                mean_rec.temperature =
+                    ( int16_t )( temp_accu / NUM_SAMPLES_PER_PUB );
+                mean_rec.ts = get_ms_since_os_start();
+                tx_record = &mean_rec;
+                hum_accu = 0;
+                temp_accu = 0;
+                bucket_ptr = 0U;
+            }
+            if( tx_record )
+            {
+                err_chk = xQueueSend( dht_rec_que, tx_record, 0 );
+                if( err_chk != pdPASS )
+                {
+                    ESP_LOGW(
+                        tag_senrd,
+                        "Queue full. Skipping this sensor reading."
+                    );
+                }
+                sen_read_result = ESP_FAIL;
+                err_chk = -1;
+                tx_record = ( data_record_t* )0U;
+            }
+            raw_count++;
         }
         else
         {
@@ -242,5 +309,14 @@ static void data_pub_task( void* params )
             );
         }
     }
+}
+
+
+static uint32_t get_ms_since_os_start( void )
+{
+    TickType_t current_ticks = xTaskGetTickCount();
+    const uint32_t time_ms =
+        ( uint32_t )( current_ticks * portTICK_PERIOD_MS );
+    return time_ms;
 }
 
